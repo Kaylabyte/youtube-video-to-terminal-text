@@ -6,15 +6,20 @@ from pydub import AudioSegment
 from pydub.playback import play
 
 def play_audio(audio_m4a):
+    """Play the audio, pretty self explanatory function."""
     audio_segment = AudioSegment.from_file(audio_m4a)
     play(audio_segment)
 
 def next_frame(frame):
-    os.system("clear")
+    """Clear the screen and display the next frame."""
+    if os.name == "nt": # Windows
+        os.system("cls")
+    else: # literally anything else (macOS, Linux etc)
+        os.system("clear")
     print(frame)
 
-# Timer that hopefully avoids drift
-def task_sched(delay, video_terminal):
+def playback_frame_sched(delay, video_terminal):
+    """Time the playback speed to match the FPS with no drift."""
     next_time = time.time() + delay
 
     for frame in video_terminal:
@@ -23,8 +28,9 @@ def task_sched(delay, video_terminal):
         next_time += delay
 
 def play_video(audio_m4a, video_terminal, fps):
+    """Play the audio and video at the same time in separate processes."""
     process_audio = multiprocessing.Process(target=play_audio, args=(audio_m4a, ))
-    process_video = multiprocessing.Process(target=task_sched, args=(1/fps, video_terminal))
+    process_video = multiprocessing.Process(target=playback_frame_sched, args=(1/fps, video_terminal))
 
     process_audio.start()
     process_video.start()
@@ -32,23 +38,12 @@ def play_video(audio_m4a, video_terminal, fps):
     process_audio.join()
     process_video.join()
 
-    print("Finished Video...")
+    print("Finished video!")
         
 if __name__ == "__main__":
-    video_terminal = []
-    fps = 30
-    audio_m4a = "./tmp/audio.m4a"
+    import config
+    import mp4totext
 
-    # with open("./tmp/hahafunky.txt", "r") as file:
-    #     count = 0
-    #     video_frame = ""
-    #     for line in file:
-    #         video_frame += line 
-    #         count += 1
-    #         if count == 72:
-    #             video_terminal.append(video_frame)
-    #             count = 0
-    #             video_frame = ""
-
-    play_video(audio_m4a, video_terminal, fps)
+    mp4totext.video_info(config.OUTPUT_VIDEO_DIR)
+    print("Please run \"main.py\" to start this program...")
 

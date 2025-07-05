@@ -12,10 +12,7 @@ def play_audio(audio_m4a):
 
 def next_frame(frame):
     """Clear the screen and display the next frame."""
-    if os.name == "nt": # Windows
-        os.system("cls")
-    else: # literally anything else (macOS, Linux etc)
-        os.system("clear")
+    print("\033c", end="") # ANSI escape sequence
     print(frame)
 
 def playback_frame_sched(delay, video_terminal):
@@ -29,21 +26,37 @@ def playback_frame_sched(delay, video_terminal):
 
 def play_video(audio_m4a, video_terminal, fps):
     """Play the audio and video at the same time in separate processes."""
-    process_audio = multiprocessing.Process(target=play_audio, args=(audio_m4a, ))
-    process_video = multiprocessing.Process(target=playback_frame_sched, args=(1/fps, video_terminal))
+    if not os.path.exists(audio_m4a):
+        print("Audio file not found. No audio will be played...")
+    elif os.path.getsize(audio_m4a) <= 0:
+        print("Audio file appears to be corrupted. No audio will be played...")
+    if len(video_terminal) == 0:
+        raise Exception(
+            "Video failed to play.\nIf this happens again, please send me the video URL so I can "
+            "figure out the issue."
+        )
 
-    process_audio.start()
-    process_video.start()
+    time.sleep(3)
 
-    process_audio.join()
-    process_video.join()
+    try:
+        process_audio = multiprocessing.Process(target=play_audio, args=(audio_m4a,))
+        process_video = multiprocessing.Process(target=playback_frame_sched, args=(1/fps, video_terminal))
 
-    print("Finished video!")
+        process_audio.start()
+        process_video.start()
+
+        process_audio.join()
+        process_video.join()
+    except KeyboardInterrupt:
+        print("\nPlayback interrupted...")
+        raise SystemExit
+
+    print("Finished video...")
         
 if __name__ == "__main__":
     import config
     import mp4totext
 
     mp4totext.video_info(config.OUTPUT_VIDEO_DIR)
-    print("Please run \"main.py\" to start this program...")
+    print("Please run main.py to start this program...")
 

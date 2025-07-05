@@ -62,7 +62,13 @@ def frame_area(height, width):
 def frame_convert(frame, scale):
     """Scale and convert the frame to greyscale, and return this modified frame alongside its new height and width."""
     frame = cv2.resize(frame, None, fx=scale, fy=scale)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # greyscale, makes working with the frames easier
+    try:
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # greyscale, makes working with the frames easier
+    except cv2.error as error:
+        raise Exception(
+            "Failed to convert frame.\nIf this happens again, please send me the video URL so I can "
+            "figure out the issue."
+        ) from error
     
     frame_height = frame.shape[0]
     frame_width = frame.shape[1]
@@ -72,13 +78,25 @@ def frame_convert(frame, scale):
 def video_convert(video_mp4, scale, char_set):
     """Convert a video to text and return both the converted video and the FPS."""
     video_capture = cv2.VideoCapture(video_mp4)
+    if not video_capture.isOpened():
+        raise FileNotFoundError(
+            f"Failed to open video file.\nPlease ensure the video exists in the output directory and "
+            "isn't corrupted, then try again..."
+        )
+
     video_terminal = []
     success, frame = video_capture.read()
+
     fps = int(video_capture.get(cv2.CAP_PROP_FPS))
+    if fps <= 0:
+        raise ValueError(
+            f"Invalid FPS value ({fps}).\nIf this happens again, please send me the video URL so I can "
+            "figure out the issue."
+        )
 
     print("Converting video...")
 
-    while success: # loops through every frames
+    while success: # loops through every frame
         frame_modified, frame_height, frame_width = frame_convert(frame, scale)
         video_terminal.append(frame_draw(frame_modified, frame_height, frame_width, char_set))
         success, frame = video_capture.read()
@@ -101,7 +119,11 @@ if __name__ == "__main__":
 
     success, frame = video_capture.read()
 
-    frame_modified, frame_height, frame_width = frame_convert(frame, config.SCALE)
+    try:
+        _, frame_height, frame_width = frame_convert(frame, config.SCALE)
+    except cv2.error:
+        frame_height = int(144 * config.SCALE)
+        frame_width = int(256 * config.SCALE)
     print(frame_area(frame_height, frame_width))
 
     print("Please resize the terminal font so the box entirely fits in the screen...")
